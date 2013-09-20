@@ -1,13 +1,15 @@
 package com.example.wordbox;
 
-import com.example.wordbox.R;
+import java.util.HashSet;
+import java.util.Set;
 
-import android.net.Uri;
-import android.os.Bundle;
 import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.net.Uri;
+import android.os.Bundle;
 import android.support.v4.view.MenuItemCompat;
 import android.util.Log;
 import android.view.Menu;
@@ -28,6 +30,10 @@ public class DefinitionActivity extends Activity {
 	public final static String QUERY = "com.example.wordbox.QUERY";
 	private static final String TAG = "raytag";
 	
+	private String currentWord;
+	private static Set<String> favourites = new HashSet<String>();
+	private static final String PREFS_NAME = "WordBoxPrefsFile";
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -43,6 +49,7 @@ public class DefinitionActivity extends Activity {
 		}
 		else {
 			Log.v(TAG, "QUERY MADE: " + query);
+			currentWord = query.trim();
 			String definition = getDefinition(query);
 			// TODO: deal with missed lookups (word not found in dictionary).
 			
@@ -61,6 +68,8 @@ public class DefinitionActivity extends Activity {
 			webview.setWebViewClient(mWebClient);
 			setContentView(webview);
 		}
+		
+		loadFavourites();
 	}
 
 	@Override
@@ -88,8 +97,45 @@ public class DefinitionActivity extends Activity {
             } 
         };
         searchView.setOnQueryTextListener(queryTextListener);
-		
+        
+        if (currentWord != null && isFavourite(currentWord)) {
+        	//Log.v(TAG, "it's a fav: " + currentWord);
+        	MenuItem toggleFavItem = menu.findItem(R.id.action_toggle_favourite);
+        	toggleFavItem.setIcon(R.drawable.ic_rating_important);
+        }
+        
 		return true;
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle item selection
+	    switch (item.getItemId()) {
+	        case R.id.action_toggle_favourite:
+	        	if (currentWord == null) 
+	        		return true;
+	        	
+	        	toggleFavourite(currentWord);
+	        	
+	        	// TODO: check if the current word is already in the favourited dictionary.
+	        	if (isFavourite(currentWord)) {
+	        		item.setIcon(R.drawable.ic_rating_important);	        		
+	        	}
+	        	else {
+	        		item.setIcon(R.drawable.ic_rating_not_important);
+	        	}
+	            return true;
+	        default:
+	            return super.onOptionsItemSelected(item);
+	    }
+
+	}
+	
+	@Override
+	protected void onStop() {
+		super.onStop();
+		
+		saveFavourites();
 	}
 
 	public String getDefinition(String word) {
@@ -110,6 +156,39 @@ public class DefinitionActivity extends Activity {
 		Intent intent = new Intent(this, DefinitionActivity.class);
     	intent.putExtra(QUERY, word);
     	startActivity(intent);
+	}
+	
+	private void toggleFavourite(String word) {
+		Log.v(TAG, "toggle fav: " + word);
+		if (favourites.contains(word)) {
+			favourites.remove(word);
+		}
+		else {
+			favourites.add(word);
+		}
+		saveFavourites();
+	}
+	
+	private boolean isFavourite(String word) {
+		if (word == null)
+			return false;
+		
+		return favourites.contains(word) ? true : false;
+	}
+	
+	private void saveFavourites() {
+		//Log.v(TAG, "Saving favs: " + favourites.toString());
+		SharedPreferences settings = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+		SharedPreferences.Editor editor = settings.edit();
+		editor.clear(); // No idea why, but this is necessary.
+		editor.putStringSet("favourites", favourites);
+		editor.apply();
+	}
+	
+	private void loadFavourites() {
+		SharedPreferences settings = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+		favourites = settings.getStringSet("favourites", null);
+		Log.v(TAG, "Loaded favs: " + favourites.toString());
 	}
 	
 }
