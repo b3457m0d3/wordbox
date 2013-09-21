@@ -14,6 +14,12 @@
         android:showAsAction="ifRoom" />
     
     <item
+        android:id="@+id/action_list_favourites"
+        android:icon="@drawable/ic_device_access_storage"
+        android:title="@string/action_list_favourites"
+        android:showAsAction="ifRoom" />
+    
+    <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:showAsAction="never"

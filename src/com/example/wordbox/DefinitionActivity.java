@@ -1,6 +1,8 @@
 package com.example.wordbox;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Random;
 import java.util.Set;
 
 import android.app.Activity;
@@ -14,6 +16,7 @@ import android.support.v4.view.MenuItemCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.SearchView;
@@ -31,45 +34,54 @@ public class DefinitionActivity extends Activity {
 	private static final String TAG = "raytag";
 	
 	private String currentWord;
-	private static Set<String> favourites = new HashSet<String>();
+	private static Set<String> favourites = new LinkedHashSet<String>();
 	private static final String PREFS_NAME = "WordBoxPrefsFile";
+	
+	private WebView webview;
+	
+	private Random random;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		random = new Random();
+		loadFavourites();
+		currentWord = null;
+		
+		webview = new WebView(this);
+		WebViewClient mWebClient = new WebViewClient(){		
+			@Override
+			public boolean shouldOverrideUrlLoading(WebView view, String url) {
+				// Users select links to jump to a new word.
+				// Log.v(TAG, "Link selected: " + url);
+				loadDefinition(url);
+				return true;
+			}
+		};
+		webview.setWebViewClient(mWebClient);
+		setContentView(webview);	
 		
 		// Get word from intent.
 		Intent intent = getIntent();
 		String query = intent.getStringExtra(QUERY);
 		
 		if (query == null) {
-			Log.v(TAG, "no query");
-			//TODO: figure out how I want to greet people...
-			setContentView(R.layout.activity_definition);
+			//Log.v(TAG, "no query");
+			if (favourites.size() == 0) {
+				//TODO: Display first-time-user instructions.
+			}
+			else if (currentWord == null) {
+				showRandomFavourite();
+			}
 		}
 		else {
 			Log.v(TAG, "QUERY MADE: " + query);
 			currentWord = query.trim();
-			String definition = getDefinition(query);
-			// TODO: deal with missed lookups (word not found in dictionary).
 			
-			WebView webview = new WebView(this);
-			webview.loadData(definition, "text/html", null);
-
-			WebViewClient mWebClient = new WebViewClient(){		
-				@Override
-				public boolean shouldOverrideUrlLoading(WebView view, String url) {
-					// Users select links to jump to a new word.
-					// Log.v(TAG, "Link selected: " + url);
-					makeQuery(url);
-					return true;
-				}
-			};
-			webview.setWebViewClient(mWebClient);
-			setContentView(webview);
+			loadDefinition(currentWord);
 		}
 		
-		loadFavourites();
 	}
 
 	@Override
@@ -92,14 +104,16 @@ public class DefinitionActivity extends Activity {
             public boolean onQueryTextSubmit(String query) { 
                 // TODO: load the definition in a new activity.
             	Log.v(TAG, "Query: " + query);
-            	makeQuery(query);
+            	loadDefinition(query);
                 return true; 
             } 
         };
         searchView.setOnQueryTextListener(queryTextListener);
         
-        if (currentWord != null && isFavourite(currentWord)) {
-        	//Log.v(TAG, "it's a fav: " + currentWord);
+        if (currentWord == null) {
+        	menu.removeItem(R.id.action_toggle_favourite);
+        }
+        else if (isFavourite(currentWord)) {
         	MenuItem toggleFavItem = menu.findItem(R.id.action_toggle_favourite);
         	toggleFavItem.setIcon(R.drawable.ic_rating_important);
         }
@@ -125,6 +139,10 @@ public class DefinitionActivity extends Activity {
 	        		item.setIcon(R.drawable.ic_rating_not_important);
 	        	}
 	            return true;
+	        case R.id.action_list_favourites:
+	        	Log.v(TAG, "list favs");
+	        	showFavourites();
+	        	return true;
 	        default:
 	            return super.onOptionsItemSelected(item);
 	    }
@@ -137,7 +155,30 @@ public class DefinitionActivity extends Activity {
 		
 		saveFavourites();
 	}
-
+	
+	// Get a random favourited word and display the definition.
+	private void showRandomFavourite() {
+		Log.v(TAG, "Loading random favourite...");
+		String[] fwords = new String[favourites.size()];
+		favourites.toArray(fwords);
+		loadDefinition(fwords[random.nextInt(favourites.size())]);
+	}
+	
+	private void loadDefinition(String query) {
+		// Look up definition for query and load into current WebView.
+		
+		String definition = getDefinition(query);
+		// TODO: deal with missed lookups (word not found in dictionary).
+		currentWord = query;
+		webview.loadData(definition, "text/html", null);
+		
+	}
+	
+	private void showFavourites() {
+		Intent intent = new Intent(this, FavouritesActivity.class);
+		startActivity(intent);
+	}
+	
 	public String getDefinition(String word) {
     	Cursor cursor = getContentResolver().query(CONTENT_URI, null, null, new String[] {word}, null);
     	if ((cursor != null) && cursor.moveToFirst()) {
@@ -189,6 +230,10 @@ public class DefinitionActivity extends Activity {
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 		favourites = settings.getStringSet("favourites", null);
 		Log.v(TAG, "Loaded favs: " + favourites.toString());
+	}
+	
+	public static Set<String> getFavourites() {
+		return favourites;
 	}
 	
 }
