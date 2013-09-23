@@ -30,6 +30,14 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.wordbox.DefinitionActivity" />
         </activity>
+        <activity
+            android:name="com.example.wordbox.QuizActivity"
+            android:label="@string/title_activity_quiz"
+            android:parentActivityName="com.example.wordbox.DefinitionActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.wordbox.DefinitionActivity" />
+        </activity>
     </application>
 
 </manifest>

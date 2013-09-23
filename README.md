@@ -1,9 +1,6 @@
 
-TODO: Swipe to the left to load a new random favourite word definition.
-TODO: Display the word itself as part of the definition. 
-TODO: Upon input to search bar remove keyboard and unfocus the search bar.
+TODO: Quiz mode as horizontal swipe tabs.
+TODO: Display the word itself as part of the definition.
 TODO: Verify ordering of favourited words is maintained.
-TODO: Add setting for toggling randomization on/off.
-
-BUG: Random word is loaded on alignment change.
+TODO: Add setting for toggling randomization on/off. -> Just have a 'randomize' button from inside quiz mode.
 

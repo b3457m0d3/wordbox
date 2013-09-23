@@ -35,30 +35,30 @@ public class DefinitionActivity extends Activity {
 	private static Set<String> favourites = new LinkedHashSet<String>();
 	private static final String PREFS_NAME = "WordBoxPrefsFile";
 	
-	private WebView webview;
+	WebView webview;
 	
 	private Random random;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_definition);
 		
 		random = new Random();
 		loadFavourites();
 		currentWord = null;
 		
-		webview = new WebView(this);
+		webview = (WebView) findViewById(R.id.definition_display);
 		WebViewClient mWebClient = new WebViewClient(){		
 			@Override
 			public boolean shouldOverrideUrlLoading(WebView view, String url) {
 				// Users select links to jump to a new word.
 				// Log.v(TAG, "Link selected: " + url);
-				loadDefinition(url);
+				makeQuery(url);
 				return true;
 			}
 		};
 		webview.setWebViewClient(mWebClient);
-		setContentView(webview);	
 		
 		// Get word from intent.
 		Intent intent = getIntent();
@@ -70,7 +70,7 @@ public class DefinitionActivity extends Activity {
 				//TODO: Display first-time-user instructions.
 			}
 			else if (currentWord == null) {
-				showRandomFavourite();
+				//showRandomFavourite(); // This is confusing for users I think. 
 			}
 		}
 		else {
@@ -102,14 +102,14 @@ public class DefinitionActivity extends Activity {
             public boolean onQueryTextSubmit(String query) { 
                 // TODO: load the definition in a new activity.
             	Log.v(TAG, "Query: " + query);
-            	loadDefinition(query);
+            	makeQuery(query);
                 return true; 
             } 
         };
         searchView.setOnQueryTextListener(queryTextListener);
         
         if (currentWord == null) {
-        	menu.removeItem(R.id.action_toggle_favourite);
+        	//menu.removeItem(R.id.action_toggle_favourite);
         }
         else if (isFavourite(currentWord)) {
         	MenuItem toggleFavItem = menu.findItem(R.id.action_toggle_favourite);
@@ -141,6 +141,10 @@ public class DefinitionActivity extends Activity {
 	        	Log.v(TAG, "list favs");
 	        	showFavourites();
 	        	return true;
+	        case R.id.action_quiz:
+	        	Log.v(TAG, "starting quiz");
+	        	launchQuiz();
+	        	return true;
 	        default:
 	            return super.onOptionsItemSelected(item);
 	    }
@@ -159,7 +163,7 @@ public class DefinitionActivity extends Activity {
 		Log.v(TAG, "Loading random favourite...");
 		String[] fwords = new String[favourites.size()];
 		favourites.toArray(fwords);
-		loadDefinition(fwords[random.nextInt(favourites.size())]);
+		makeQuery(fwords[random.nextInt(favourites.size())]);
 	}
 	
 	private void loadDefinition(String query) {
@@ -232,6 +236,11 @@ public class DefinitionActivity extends Activity {
 	
 	public static Set<String> getFavourites() {
 		return favourites;
+	}
+	
+	private void launchQuiz() {
+		Intent intent = new Intent(this, QuizActivity.class);
+    	startActivity(intent);
 	}
 	
 }
