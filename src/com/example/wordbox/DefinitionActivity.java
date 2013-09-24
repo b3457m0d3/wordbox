@@ -1,7 +1,6 @@
 package com.example.wordbox;
 
 import java.util.LinkedHashSet;
-import java.util.Random;
 import java.util.Set;
 
 import android.app.Activity;
@@ -33,18 +32,15 @@ public class DefinitionActivity extends Activity {
 	
 	private String currentWord;
 	private static Set<String> favourites = new LinkedHashSet<String>();
-	private static final String PREFS_NAME = "WordBoxPrefsFile";
+	public static final String PREFS_NAME = "WordBoxPrefsFile";
 	
 	WebView webview;
-	
-	private Random random;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_definition);
 		
-		random = new Random();
 		loadFavourites();
 		currentWord = null;
 		
@@ -158,22 +154,14 @@ public class DefinitionActivity extends Activity {
 		saveFavourites();
 	}
 	
-	// Get a random favourited word and display the definition.
-	private void showRandomFavourite() {
-		Log.v(TAG, "Loading random favourite...");
-		String[] fwords = new String[favourites.size()];
-		favourites.toArray(fwords);
-		makeQuery(fwords[random.nextInt(favourites.size())]);
-	}
-	
 	private void loadDefinition(String query) {
 		// Look up definition for query and load into current WebView.
 		
 		String definition = getDefinition(query);
+		Log.v(TAG, definition);
 		// TODO: deal with missed lookups (word not found in dictionary).
 		currentWord = query;
 		webview.loadData(definition, "text/html", null);
-		
 	}
 	
 	private void showFavourites() {
@@ -184,13 +172,14 @@ public class DefinitionActivity extends Activity {
 	public String getDefinition(String word) {
     	Cursor cursor = getContentResolver().query(CONTENT_URI, null, null, new String[] {word}, null);
     	if ((cursor != null) && cursor.moveToFirst()) {
-    		// int wIndex = cursor.getColumnIndexOrThrow(KEY_WORD);
+    		int wIndex = cursor.getColumnIndexOrThrow(KEY_WORD);
     		int dIndex = cursor.getColumnIndexOrThrow(KEY_DEFINITION);
-    		return cursor.getString(dIndex);
+    		String def = "<b>" + cursor.getString(wIndex) + "</b><hr style='clear:both'>" + cursor.getString(dIndex);
+    		return def;
     	}
     	else {
     		// Word not found.
-    		return null;
+    		return "Word not found...";
     	}
     }
 	
@@ -216,7 +205,7 @@ public class DefinitionActivity extends Activity {
 		if (word == null)
 			return false;
 		
-		return favourites.contains(word) ? true : false;
+		return favourites.contains(word);
 	}
 	
 	private void saveFavourites() {
@@ -225,6 +214,12 @@ public class DefinitionActivity extends Activity {
 		SharedPreferences.Editor editor = settings.edit();
 		editor.clear(); // No idea why, but this is necessary.
 		editor.putStringSet("favourites", favourites);
+		
+		// Also want to store the definitions.
+		for (String f : favourites) {
+			editor.putString(f, getDefinition(f));
+		}
+		
 		editor.apply();
 	}
 	

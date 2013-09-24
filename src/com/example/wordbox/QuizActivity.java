@@ -1,7 +1,11 @@
 package com.example.wordbox;
 
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Set;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -9,12 +13,14 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.NavUtils;
 import android.support.v4.view.ViewPager;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 import android.widget.TextView;
 
 public class QuizActivity extends FragmentActivity {
@@ -33,15 +39,29 @@ public class QuizActivity extends FragmentActivity {
 	 * The {@link ViewPager} that will host the section contents.
 	 */
 	ViewPager mViewPager;
-
+	
+	private static final String TAG = "raytag";
+	private String[] favourites;
+	private HashMap<String, String> definitions;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_quiz);
-
+		
+		// Load info to be used in the quiz.
+		Set<String> sFavourites = DefinitionActivity.getFavourites();
+		favourites = new String[sFavourites.size()];
+		sFavourites.toArray(favourites);
+		definitions = new HashMap<String, String>();
+		SharedPreferences settings = getSharedPreferences(DefinitionActivity.PREFS_NAME, MODE_PRIVATE);
+		for (String f : sFavourites) {
+			definitions.put(f, settings.getString(f, null));
+		}
+			
 		// Show the Up button in the action bar.
 		getActionBar().setDisplayHomeAsUpEnabled(true);
-
+		
 		// Create the adapter that will return a fragment for each of the three
 		// primary sections of the app.
 		mSectionsPagerAdapter = new SectionsPagerAdapter(
@@ -50,7 +70,7 @@ public class QuizActivity extends FragmentActivity {
 		// Set up the ViewPager with the sections adapter.
 		mViewPager = (ViewPager) findViewById(R.id.pager);
 		mViewPager.setAdapter(mSectionsPagerAdapter);
-
+		
 	}
 
 	@Override
@@ -76,7 +96,7 @@ public class QuizActivity extends FragmentActivity {
 		}
 		return super.onOptionsItemSelected(item);
 	}
-
+	
 	/**
 	 * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
 	 * one of the sections/tabs/pages.
@@ -94,7 +114,9 @@ public class QuizActivity extends FragmentActivity {
 			// below) with the page number as its lone argument.
 			Fragment fragment = new DummySectionFragment();
 			Bundle args = new Bundle();
-			args.putInt(DummySectionFragment.ARG_SECTION_NUMBER, position + 1);
+			//args.putInt(DummySectionFragment.ARG_SECTION_NUMBER, position + 1);
+			//Log.v(TAG, "def: " + definitions.get(favourites[position]));
+			args.putString(DummySectionFragment.ARG_WORD_DEFINITION, definitions.get(favourites[position]));
 			fragment.setArguments(args);
 			return fragment;
 		}
@@ -102,21 +124,24 @@ public class QuizActivity extends FragmentActivity {
 		@Override
 		public int getCount() {
 			// Show 3 total pages.
-			return 3;
+			// return 3;
+			return favourites.length;
 		}
 
 		@Override
 		public CharSequence getPageTitle(int position) {
-			Locale l = Locale.getDefault();
-			switch (position) {
-			case 0:
-				return getString(R.string.title_section1).toUpperCase(l);
-			case 1:
-				return getString(R.string.title_section2).toUpperCase(l);
-			case 2:
-				return getString(R.string.title_section3).toUpperCase(l);
-			}
-			return null;
+			return favourites[position];
+//			
+//			Locale l = Locale.getDefault();
+//			switch (position) {
+//			case 0:
+//				return getString(R.string.title_section1).toUpperCase(l);
+//			case 1:
+//				return getString(R.string.title_section2).toUpperCase(l);
+//			case 2:
+//				return getString(R.string.title_section3).toUpperCase(l);
+//			}
+//			return null;
 		}
 	}
 
@@ -130,6 +155,7 @@ public class QuizActivity extends FragmentActivity {
 		 * fragment.
 		 */
 		public static final String ARG_SECTION_NUMBER = "section_number";
+		public static final String ARG_WORD_DEFINITION = "word_definition";
 
 		public DummySectionFragment() {
 		}
@@ -139,10 +165,13 @@ public class QuizActivity extends FragmentActivity {
 				Bundle savedInstanceState) {
 			View rootView = inflater.inflate(R.layout.fragment_quiz_dummy,
 					container, false);
-			TextView dummyTextView = (TextView) rootView
-					.findViewById(R.id.section_label);
-			dummyTextView.setText(Integer.toString(getArguments().getInt(
-					ARG_SECTION_NUMBER)));
+//			TextView dummyTextView = (TextView) rootView
+//					.findViewById(R.id.section_label);
+//			dummyTextView.setText(Integer.toString(getArguments().getInt(
+//					ARG_SECTION_NUMBER)));
+			WebView dummyWebView = (WebView) rootView.findViewById(R.id.quiz_definition_display);
+			dummyWebView.loadData(getArguments().getString(ARG_WORD_DEFINITION), "text/html", null);
+			
 			return rootView;
 		}
 	}
