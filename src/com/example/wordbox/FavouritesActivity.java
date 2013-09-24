@@ -1,7 +1,6 @@
 package com.example.wordbox;
 
 import java.util.ArrayList;
-import java.util.Set;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -80,6 +79,10 @@ public class FavouritesActivity extends Activity {
 			//
 			NavUtils.navigateUpFromSameTask(this);
 			return true;
+		case R.id.action_quiz:
+        	// Log.v(TAG, "starting quiz");
+        	gotoQuiz();
+        	return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}
@@ -95,6 +98,11 @@ public class FavouritesActivity extends Activity {
 		// Send word to new activity to display the definition.
 		Intent intent = new Intent(this, DefinitionActivity.class);
     	intent.putExtra(DefinitionActivity.QUERY, word);
+    	startActivity(intent);
+	}
+	
+	private void gotoQuiz() {
+		Intent intent = new Intent(this, QuizActivity.class);
     	startActivity(intent);
 	}
 

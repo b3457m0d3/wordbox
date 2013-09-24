@@ -1,4 +1,3 @@
-TODO: Navigate to quiz from favourites list.
 TODO: Quiz reveal definition mechanism (not sure what it should look like yet).
 TODO: Ordering of favourited words: options for chronological, alphabetical (drop down on up button thing).
 TODO: Able to remove favourited words during the quiz. (i.e. mark as learned)

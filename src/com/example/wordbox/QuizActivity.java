@@ -84,30 +84,41 @@ public class QuizActivity extends FragmentActivity {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
-		case android.R.id.home:
-			// This ID represents the Home or Up button. In the case of this
-			// activity, the Up button is shown. Use NavUtils to allow users
-			// to navigate up one level in the application structure. For
-			// more details, see the Navigation pattern on Android Design:
-			//
-			// http://developer.android.com/design/patterns/navigation.html#up-vs-back
-			//
-			NavUtils.navigateUpFromSameTask(this);
-			return true;
-		case R.id.action_shuffle:
-			Intent intent = new Intent(this, QuizActivity.class);
-	    	startActivity(intent);
-			return true;
+			case android.R.id.home:
+				// This ID represents the Home or Up button. In the case of this
+				// activity, the Up button is shown. Use NavUtils to allow users
+				// to navigate up one level in the application structure. For
+				// more details, see the Navigation pattern on Android Design:
+				//
+				// http://developer.android.com/design/patterns/navigation.html#up-vs-back
+				//
+				NavUtils.navigateUpFromSameTask(this);
+				return true;
+			case R.id.action_shuffle:
+				gotoQuiz();
+				return true;
+			case R.id.action_list_favourites:
+				gotoFavourites();
+				return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}
-	
 	
 	@Override
 	protected void onStop() {
 		super.onStop();
 		
 		fm.saveFavourites(this);
+	}
+	
+	private void gotoFavourites() {
+		Intent intent = new Intent(this, FavouritesActivity.class);
+		startActivity(intent);
+	}
+	
+	private void gotoQuiz() {
+		Intent intent = new Intent(this, QuizActivity.class);
+		startActivity(intent);
 	}
 	
 	/**
