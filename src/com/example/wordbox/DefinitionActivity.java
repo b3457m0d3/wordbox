@@ -20,15 +20,12 @@ import android.widget.SearchView;
 
 public class DefinitionActivity extends Activity {
 	
-	// For hooking into dictionary content provider.
-	public static String AUTHORITY = "livio.pack.lang.en_US.DictionaryProvider";
-	public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/dictionary");
-	public static final Uri CONTENT_URI3 = Uri.parse("content://" + AUTHORITY + "/" + SearchManager.SUGGEST_URI_PATH_QUERY);
-	public static final String KEY_WORD = SearchManager.SUGGEST_COLUMN_TEXT_1;
-	public static final String KEY_DEFINITION = SearchManager.SUGGEST_COLUMN_TEXT_2;	
-	
 	public final static String QUERY = "com.example.wordbox.QUERY";
 	private static final String TAG = "raytag";
+	
+	private Dictionary dictionary;
+	
+	private FavouritesManager favouritesManager;
 	
 	private String currentWord;
 	private static Set<String> favourites = new LinkedHashSet<String>();
@@ -41,6 +38,8 @@ public class DefinitionActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_definition);
 		
+		dictionary = Dictionary.getInstance();
+		favouritesManager = FavouritesManager.getInstance();
 		loadFavourites();
 		currentWord = null;
 		
@@ -90,14 +89,13 @@ public class DefinitionActivity extends Activity {
         	@Override 
             public boolean onQueryTextChange(String newText) { 
                 // TODO: list suggestions
-        		// Log.v(TAG, "textchange");
+        		// Log.v(TAG, "text change");
                 return true; 
             } 
 
             @Override
             public boolean onQueryTextSubmit(String query) { 
-                // TODO: load the definition in a new activity.
-            	Log.v(TAG, "Query: " + query);
+            	// Log.v(TAG, "Query: " + query);
             	makeQuery(query);
                 return true; 
             } 
@@ -134,11 +132,11 @@ public class DefinitionActivity extends Activity {
 	        	}
 	            return true;
 	        case R.id.action_list_favourites:
-	        	Log.v(TAG, "list favs");
+	        	// Log.v(TAG, "list favs");
 	        	showFavourites();
 	        	return true;
 	        case R.id.action_quiz:
-	        	Log.v(TAG, "starting quiz");
+	        	// Log.v(TAG, "starting quiz");
 	        	launchQuiz();
 	        	return true;
 	        default:
@@ -158,7 +156,6 @@ public class DefinitionActivity extends Activity {
 		// Look up definition for query and load into current WebView.
 		
 		String definition = getDefinition(query);
-		Log.v(TAG, definition);
 		// TODO: deal with missed lookups (word not found in dictionary).
 		currentWord = query;
 		webview.loadData(definition, "text/html", null);
@@ -170,17 +167,8 @@ public class DefinitionActivity extends Activity {
 	}
 	
 	public String getDefinition(String word) {
-    	Cursor cursor = getContentResolver().query(CONTENT_URI, null, null, new String[] {word}, null);
-    	if ((cursor != null) && cursor.moveToFirst()) {
-    		int wIndex = cursor.getColumnIndexOrThrow(KEY_WORD);
-    		int dIndex = cursor.getColumnIndexOrThrow(KEY_DEFINITION);
-    		String def = "<b>" + cursor.getString(wIndex) + "</b><hr style='clear:both'>" + cursor.getString(dIndex);
-    		return def;
-    	}
-    	else {
-    		// Word not found.
-    		return "Word not found...";
-    	}
+		
+		return dictionary.query(this, word);
     }
 	
 	private void makeQuery(String word) {
@@ -190,49 +178,29 @@ public class DefinitionActivity extends Activity {
     	startActivity(intent);
 	}
 	
-	private void toggleFavourite(String word) {
-		Log.v(TAG, "toggle fav: " + word);
-		if (favourites.contains(word)) {
-			favourites.remove(word);
-		}
-		else {
-			favourites.add(word);
-		}
-		saveFavourites();
+	public static void makeQuery(Activity activity, String word) {
+		// Send word to new activity to display the definition.
+		Intent intent = new Intent(activity, DefinitionActivity.class);
+    	intent.putExtra(QUERY, word);
+    	activity.startActivity(intent);
 	}
 	
-	private boolean isFavourite(String word) {
-		if (word == null)
-			return false;
-		
-		return favourites.contains(word);
+	private void toggleFavourite(String word) {
+		favouritesManager.toggleFavourite(this, word);
+	}
+	
+	private boolean isFavourite(String word) {	
+		return favouritesManager.isFavourite(word);
 	}
 	
 	private void saveFavourites() {
-		//Log.v(TAG, "Saving favs: " + favourites.toString());
-		SharedPreferences settings = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-		SharedPreferences.Editor editor = settings.edit();
-		editor.clear(); // No idea why, but this is necessary.
-		editor.putStringSet("favourites", favourites);
-		
-		// Also want to store the definitions.
-		for (String f : favourites) {
-			editor.putString(f, getDefinition(f));
-		}
-		
-		editor.apply();
+		favouritesManager.saveFavourites(this);
 	}
 	
 	private void loadFavourites() {
-		SharedPreferences settings = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-		favourites = settings.getStringSet("favourites", null);
-		Log.v(TAG, "Loaded favs: " + favourites.toString());
+		favouritesManager.loadFavourites(this);
 	}
-	
-	public static Set<String> getFavourites() {
-		return favourites;
-	}
-	
+		
 	private void launchQuiz() {
 		Intent intent = new Intent(this, QuizActivity.class);
     	startActivity(intent);

@@ -1,10 +1,12 @@
 package com.example.wordbox;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -21,6 +23,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.TextView;
 
 public class QuizActivity extends FragmentActivity {
@@ -41,24 +44,22 @@ public class QuizActivity extends FragmentActivity {
 	ViewPager mViewPager;
 	
 	private static final String TAG = "raytag";
-	private String[] favourites;
-	private HashMap<String, String> definitions;
+	
+	private FavouritesManager fm;
+	
+	private ArrayList<String> favourites;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_quiz);
 		
+		fm = FavouritesManager.getInstance();
+		fm.loadFavourites(this);
+		
 		// Load info to be used in the quiz.
-		Set<String> sFavourites = DefinitionActivity.getFavourites();
-		favourites = new String[sFavourites.size()];
-		sFavourites.toArray(favourites);
-		definitions = new HashMap<String, String>();
-		SharedPreferences settings = getSharedPreferences(DefinitionActivity.PREFS_NAME, MODE_PRIVATE);
-		for (String f : sFavourites) {
-			definitions.put(f, settings.getString(f, null));
-		}
-			
+		favourites = fm.getFavourites(FavouritesManager.ORDER_RANDOM);
+		
 		// Show the Up button in the action bar.
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 		
@@ -93,8 +94,20 @@ public class QuizActivity extends FragmentActivity {
 			//
 			NavUtils.navigateUpFromSameTask(this);
 			return true;
+		case R.id.action_shuffle:
+			Intent intent = new Intent(this, QuizActivity.class);
+	    	startActivity(intent);
+			return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+	
+	
+	@Override
+	protected void onStop() {
+		super.onStop();
+		
+		fm.saveFavourites(this);
 	}
 	
 	/**
@@ -114,9 +127,7 @@ public class QuizActivity extends FragmentActivity {
 			// below) with the page number as its lone argument.
 			Fragment fragment = new DummySectionFragment();
 			Bundle args = new Bundle();
-			//args.putInt(DummySectionFragment.ARG_SECTION_NUMBER, position + 1);
-			//Log.v(TAG, "def: " + definitions.get(favourites[position]));
-			args.putString(DummySectionFragment.ARG_WORD_DEFINITION, definitions.get(favourites[position]));
+			args.putString(DummySectionFragment.ARG_WORD_DEFINITION, fm.getDefinition(favourites.get(position)));
 			fragment.setArguments(args);
 			return fragment;
 		}
@@ -125,23 +136,12 @@ public class QuizActivity extends FragmentActivity {
 		public int getCount() {
 			// Show 3 total pages.
 			// return 3;
-			return favourites.length;
+			return favourites.size();
 		}
 
 		@Override
 		public CharSequence getPageTitle(int position) {
-			return favourites[position];
-//			
-//			Locale l = Locale.getDefault();
-//			switch (position) {
-//			case 0:
-//				return getString(R.string.title_section1).toUpperCase(l);
-//			case 1:
-//				return getString(R.string.title_section2).toUpperCase(l);
-//			case 2:
-//				return getString(R.string.title_section3).toUpperCase(l);
-//			}
-//			return null;
+			return favourites.get(position);
 		}
 	}
 
@@ -154,7 +154,7 @@ public class QuizActivity extends FragmentActivity {
 		 * The fragment argument representing the section number for this
 		 * fragment.
 		 */
-		public static final String ARG_SECTION_NUMBER = "section_number";
+		
 		public static final String ARG_WORD_DEFINITION = "word_definition";
 
 		public DummySectionFragment() {
@@ -165,12 +165,19 @@ public class QuizActivity extends FragmentActivity {
 				Bundle savedInstanceState) {
 			View rootView = inflater.inflate(R.layout.fragment_quiz_dummy,
 					container, false);
-//			TextView dummyTextView = (TextView) rootView
-//					.findViewById(R.id.section_label);
-//			dummyTextView.setText(Integer.toString(getArguments().getInt(
-//					ARG_SECTION_NUMBER)));
 			WebView dummyWebView = (WebView) rootView.findViewById(R.id.quiz_definition_display);
 			dummyWebView.loadData(getArguments().getString(ARG_WORD_DEFINITION), "text/html", null);
+			
+			WebViewClient mWebClient = new WebViewClient(){		
+				@Override
+				public boolean shouldOverrideUrlLoading(WebView view, String url) {
+					// Users select links to jump to a new word.
+					DefinitionActivity.makeQuery(getActivity(), url);
+					return true;
+				}
+			};
+			dummyWebView.setWebViewClient(mWebClient);
+			
 			
 			return rootView;
 		}

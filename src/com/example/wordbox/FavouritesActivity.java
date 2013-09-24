@@ -1,5 +1,6 @@
 package com.example.wordbox;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 import android.os.Bundle;
@@ -16,13 +17,15 @@ import android.widget.ListView;
 import android.support.v4.app.NavUtils;
 
 public class FavouritesActivity extends Activity {
+
+	private static final String TAG = "raytag";
+
+	private FavouritesManager fm;
 	
+	private ArrayList<String> favouriteWords;
 	private ListView wordsListView;
 	private ArrayAdapter<String> arrayAdapter;
-	private String[] words;
 	private OnItemClickListener wordClickHandler;
-	
-	private static final String TAG = "raytag";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -31,19 +34,20 @@ public class FavouritesActivity extends Activity {
 		// Show the Up button in the action bar.
 		setupActionBar();
 		
+		fm = FavouritesManager.getInstance();
+		fm.loadFavourites(this);
+		
 		wordsListView = (ListView) findViewById(R.id.favouritesListView);
 		
-		Set<String> favourites = DefinitionActivity.getFavourites();
-		words = new String[favourites.size()];
-		favourites.toArray(words);
+		favouriteWords = fm.getFavourites(FavouritesManager.ORDER_RANDOM);
 		
-		arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, words);
+		arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, favouriteWords);
 		wordsListView.setAdapter(arrayAdapter);
 		
 		wordClickHandler = new OnItemClickListener() {
 			public void onItemClick(AdapterView parent, View v, int position, long id) {
-				Log.v(TAG, "item cliked: " + words[position]);
-				makeQuery(words[position]);
+				Log.v(TAG, "item cliked: " + favouriteWords.get(position));
+				makeQuery(favouriteWords.get(position));
 			}
 		};
 		wordsListView.setOnItemClickListener(wordClickHandler);
@@ -53,9 +57,7 @@ public class FavouritesActivity extends Activity {
 	 * Set up the {@link android.app.ActionBar}.
 	 */
 	private void setupActionBar() {
-
 		getActionBar().setDisplayHomeAsUpEnabled(true);
-
 	}
 
 	@Override
@@ -80,6 +82,13 @@ public class FavouritesActivity extends Activity {
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+	
+	@Override
+	protected void onStop() {
+		super.onStop();
+		
+		fm.saveFavourites(this);
 	}
 	
 	private void makeQuery(String word) {
