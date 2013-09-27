@@ -7,4 +7,7 @@ TODO: Clear favourites option in the settings.
 TODO: Remove translations from definitions.
 TODO: New icon.
 
+TODO: Create my own dictionary in a SQL database. There is a Searchable Dictionary sample that I could use as reference http://developer.android.com/tools/samples/index.html.
+
+BUG: Can get stranded in the empty MainActivity by hitting the back button.
 BUG: if you are in the list of favourited words, click a word, unfavourite it, and hit back, you get the old list of favourites (the one you just unfavourited is still there).

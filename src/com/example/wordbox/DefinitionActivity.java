@@ -1,12 +1,14 @@
 package com.example.wordbox;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 import android.app.Activity;
+import android.app.SearchManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.view.MenuItemCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,10 +26,11 @@ public class DefinitionActivity extends Activity {
 	private FavouritesManager favouritesManager;
 	
 	private String currentWord;
-	private static Set<String> favourites = new LinkedHashSet<String>();
+	private static Set<String> favourites;
 	public static final String PREFS_NAME = "WordBoxPrefsFile";
 	
-	WebView webview;
+	private WebView webview;
+	private SearchView searchView;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +39,9 @@ public class DefinitionActivity extends Activity {
 		
 		dictionary = Dictionary.getInstance();
 		favouritesManager = FavouritesManager.getInstance();
+		if (favourites == null) {
+			favourites = new LinkedHashSet<String>();
+		}
 		loadFavourites();
 		currentWord = null;
 		
@@ -51,26 +57,24 @@ public class DefinitionActivity extends Activity {
 		};
 		webview.setWebViewClient(mWebClient);
 		
-		// Get word from intent.
-		Intent intent = getIntent();
-		String query = intent.getStringExtra(QUERY);
+		handleIntent(getIntent());
 		
-		if (query == null) {
-			//Log.v(TAG, "no query");
-			if (favourites.size() == 0) {
-				//TODO: Display first-time-user instructions.
-			}
-			else if (currentWord == null) {
-				//showRandomFavourite(); // This is confusing for users I think. 
-			}
+	}
+	
+	@Override
+	protected void onNewIntent(Intent intent) {
+	    setIntent(intent);
+	    handleIntent(intent);
+	}
+	
+	private void handleIntent(Intent intent) {
+		// Get word from intent and load definition.
+		if (intent != null && intent.getAction() != null && intent.getAction().equals(Intent.ACTION_SEARCH)) {
+			Log.v(TAG, "Handling search intent.");
+			String query = intent.getStringExtra(SearchManager.QUERY);
+			// Log.v(TAG, "QUERY MADE: " + query);
+			loadDefinition(query);
 		}
-		else {
-			Log.v(TAG, "QUERY MADE: " + query);
-			currentWord = query.trim();
-			
-			loadDefinition(currentWord);
-		}
-		
 	}
 
 	@Override
@@ -78,15 +82,27 @@ public class DefinitionActivity extends Activity {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.definition, menu);
 		
-		// Configure the collapsable search item.
+		// Get the SearchView and set the searchable configuration.
+		SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+		searchView = (SearchView) menu.findItem(R.id.menu_search).getActionView();
+		// Assumption: current activity is the searchable filter.
+		searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+		// Make sure the icon is always in the action bar.
+		// searchView.setIconifiedByDefault(false); // Ugly. Keeps icon up even on expanded search view...
+		
+		/* old search view
+		// Configure the collapsible search item.
 		MenuItem searchItem = menu.findItem(R.id.action_search);
 		SearchView searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
-        final SearchView.OnQueryTextListener queryTextListener = new SearchView.OnQueryTextListener() {
+		final SearchView.OnQueryTextListener queryTextListener = new SearchView.OnQueryTextListener() {
         	@Override 
             public boolean onQueryTextChange(String newText) { 
-                // TODO: list suggestions
-        		// Log.v(TAG, "text change");
-                return true; 
+                // List suggested words.
+        		ArrayList<String> partialMatches = partialMatch(newText);
+        		if (partialMatches != null) {
+        			Log.v(TAG, partialMatches.toString());        			
+        		}
+        		return true; 
             } 
 
             @Override
@@ -97,7 +113,8 @@ public class DefinitionActivity extends Activity {
             } 
         };
         searchView.setOnQueryTextListener(queryTextListener);
-        
+        */
+		
         if (currentWord == null) {
         	//menu.removeItem(R.id.action_toggle_favourite);
         }
@@ -150,7 +167,7 @@ public class DefinitionActivity extends Activity {
 	
 	private void loadDefinition(String query) {
 		// Look up definition for query and load into current WebView.
-		
+		query = query.trim();
 		String definition = getDefinition(query);
 		// TODO: deal with missed lookups (word not found in dictionary).
 		currentWord = query;
@@ -168,17 +185,19 @@ public class DefinitionActivity extends Activity {
     }
 	
 	private void makeQuery(String word) {
-		// Send word to new activity to display the definition.
-		Intent intent = new Intent(this, DefinitionActivity.class);
-    	intent.putExtra(QUERY, word);
-    	startActivity(intent);
+		searchView.setQuery(word, true);
 	}
 	
 	public static void makeQuery(Activity activity, String word) {
-		// Send word to new activity to display the definition.
+		// Create a search intent.
 		Intent intent = new Intent(activity, DefinitionActivity.class);
-    	intent.putExtra(QUERY, word);
+		intent.setAction(Intent.ACTION_SEARCH);
+    	intent.putExtra(SearchManager.QUERY, word);
     	activity.startActivity(intent);
+	}
+	
+	public ArrayList<String> partialMatch(String word) {
+		return dictionary.partialMatch(this, word);
 	}
 	
 	private void toggleFavourite(String word) {

@@ -136,9 +136,9 @@ public class QuizActivity extends FragmentActivity {
 			// getItem is called to instantiate the fragment for the given page.
 			// Return a DummySectionFragment (defined as a static inner class
 			// below) with the page number as its lone argument.
-			Fragment fragment = new DummySectionFragment();
+			Fragment fragment = new CardFrontFragment();
 			Bundle args = new Bundle();
-			args.putString(DummySectionFragment.ARG_WORD_DEFINITION, fm.getDefinition(favourites.get(position)));
+			args.putString(CardFrontFragment.ARG_WORD_DEFINITION, fm.getDefinition(favourites.get(position)));
 			fragment.setArguments(args);
 			return fragment;
 		}
@@ -189,9 +189,41 @@ public class QuizActivity extends FragmentActivity {
 			};
 			dummyWebView.setWebViewClient(mWebClient);
 			
-			
 			return rootView;
 		}
 	}
+	
+	/**
+     * A fragment representing the front of the card.
+     */
+    public static class CardFrontFragment extends Fragment {
+    	
+		public static final String ARG_WORD_DEFINITION = "word_definition";
+    	
+		public CardFrontFragment() {}
+		
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                Bundle savedInstanceState) {
+        	
+        	View rootView = inflater.inflate(R.layout.fragment_quiz_card_front,
+					container, false);
+			WebView dummyWebView = (WebView) rootView.findViewById(R.id.quiz_definition_display);
+			dummyWebView.loadData(getArguments().getString(ARG_WORD_DEFINITION), "text/html", null);
+			
+			WebViewClient mWebClient = new WebViewClient(){		
+				@Override
+				public boolean shouldOverrideUrlLoading(WebView view, String url) {
+					// Users select links to jump to a new word.
+					DefinitionActivity.makeQuery(getActivity(), url);
+					return true;
+				}
+			};
+			dummyWebView.setWebViewClient(mWebClient);
+			
+			return rootView;
+        }
+    }
+
 
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import android.os.Bundle;
 import android.app.Activity;
+import android.app.SearchManager;
 import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
@@ -45,7 +46,7 @@ public class FavouritesActivity extends Activity {
 		
 		wordClickHandler = new OnItemClickListener() {
 			public void onItemClick(AdapterView parent, View v, int position, long id) {
-				Log.v(TAG, "item cliked: " + favouriteWords.get(position));
+				Log.v(TAG, "item clicked: " + favouriteWords.get(position));
 				makeQuery(favouriteWords.get(position));
 			}
 		};
@@ -95,10 +96,7 @@ public class FavouritesActivity extends Activity {
 	}
 	
 	private void makeQuery(String word) {
-		// Send word to new activity to display the definition.
-		Intent intent = new Intent(this, DefinitionActivity.class);
-    	intent.putExtra(DefinitionActivity.QUERY, word);
-    	startActivity(intent);
+		DefinitionActivity.makeQuery(this, word);
 	}
 	
 	private void gotoQuiz() {
