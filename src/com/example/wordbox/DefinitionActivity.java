@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -74,6 +75,12 @@ public class DefinitionActivity extends Activity {
 			String query = intent.getStringExtra(SearchManager.QUERY);
 			// Log.v(TAG, "QUERY MADE: " + query);
 			loadDefinition(query);
+		}
+		else if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+		    // Handle a suggestions click (because the suggestions all use ACTION_VIEW)
+		    Log.v(TAG, "got the data");
+		    // Uri data = intent.getData();
+		    // showResult(data);
 		}
 	}
 

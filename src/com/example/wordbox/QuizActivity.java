@@ -1,14 +1,13 @@
 package com.example.wordbox;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Set;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -16,11 +15,12 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.NavUtils;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -136,11 +136,19 @@ public class QuizActivity extends FragmentActivity {
 			// getItem is called to instantiate the fragment for the given page.
 			// Return a DummySectionFragment (defined as a static inner class
 			// below) with the page number as its lone argument.
-			Fragment fragment = new CardFrontFragment();
+			
+			Fragment fragment = new FlashCard();
 			Bundle args = new Bundle();
-			args.putString(CardFrontFragment.ARG_WORD_DEFINITION, fm.getDefinition(favourites.get(position)));
+			args.putString(FlashCard.ARG_WORD, favourites.get(position));
+			args.putString(FlashCard.ARG_DEFINITION, fm.getDefinition(favourites.get(position)));
 			fragment.setArguments(args);
 			return fragment;
+			
+//			Fragment fragment = new CardFrontFragment();
+//			Bundle args = new Bundle();
+//			args.putString(CardFrontFragment.ARG_WORD, favourites.get(position));
+//			fragment.setArguments(args);
+//			return fragment;
 		}
 
 		@Override
@@ -155,75 +163,211 @@ public class QuizActivity extends FragmentActivity {
 			return favourites.get(position);
 		}
 	}
-
-	/**
-	 * A dummy fragment representing a section of the app, but that simply
-	 * displays dummy text.
-	 */
-	public static class DummySectionFragment extends Fragment {
-		/**
-		 * The fragment argument representing the section number for this
-		 * fragment.
-		 */
+	
+	public static class FlashCard extends Fragment implements OnTouchListener, Handler.Callback {
+		public static final String ARG_WORD = "flashcard_word";
+		public static final String ARG_DEFINITION = "flashcard_definition";
+		public static final int CLICK_ON_WEBVIEW = 1;
+		public static final int CLICK_ON_URL = 2;
 		
-		public static final String ARG_WORD_DEFINITION = "word_definition";
-
-		public DummySectionFragment() {
-		}
-
+		private final Handler handler = new Handler(this);
+		
+		
+		private TextView wordView;
+		private WebView definitionView;
+		private WebViewClient defintionViewClient;
+		private int animationDuration;
+		
+		private String word;
+		private String definition;
+		private String lastURL;	
+		
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
-			View rootView = inflater.inflate(R.layout.fragment_quiz_dummy,
-					container, false);
-			WebView dummyWebView = (WebView) rootView.findViewById(R.id.quiz_definition_display);
-			dummyWebView.loadData(getArguments().getString(ARG_WORD_DEFINITION), "text/html", null);
 			
-			WebViewClient mWebClient = new WebViewClient(){		
+			View rootView = inflater.inflate(R.layout.fragment_quiz_card, container, false);
+
+			wordView = (TextView) rootView.findViewById(R.id.quiz_word);
+			definitionView = (WebView) rootView.findViewById(R.id.quiz_definition);
+			
+			// Initially hide the definition.
+			definitionView.setVisibility(View.GONE);
+			
+			animationDuration = getResources().getInteger(android.R.integer.config_shortAnimTime);
+			
+			word = getArguments().getString(ARG_WORD);
+			wordView.setText(word);
+			wordView.setBackgroundResource(android.R.color.white);
+			wordView.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					Log.v(TAG, "wordView clicked");
+					crossfade(definitionView, wordView);
+				}
+			});
+			
+			definitionView.setOnTouchListener(this);			
+			defintionViewClient = new WebViewClient(){		
 				@Override
 				public boolean shouldOverrideUrlLoading(WebView view, String url) {
 					// Users select links to jump to a new word.
-					DefinitionActivity.makeQuery(getActivity(), url);
+					lastURL = url;
+					handler.sendEmptyMessage(CLICK_ON_URL);
 					return true;
 				}
 			};
-			dummyWebView.setWebViewClient(mWebClient);
+			definitionView.setWebViewClient(defintionViewClient);
+			definition = getArguments().getString(ARG_DEFINITION);
+			definitionView.loadData(definition, "text/html", null);
 			
 			return rootView;
 		}
+		
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            if (v.getId() == R.id.quiz_definition && event.getAction() == MotionEvent.ACTION_UP){
+            	handler.sendEmptyMessageDelayed(CLICK_ON_WEBVIEW, 400);
+            }
+            return false;
+        }
+
+        @Override
+        public boolean handleMessage(Message msg) {
+            if (msg.what == CLICK_ON_URL){
+                handler.removeMessages(CLICK_ON_WEBVIEW);
+				DefinitionActivity.makeQuery(getActivity(), lastURL);
+                return true;
+            }
+            if (msg.what == CLICK_ON_WEBVIEW){
+                crossfade(wordView, definitionView);
+                return true;
+            }
+            return false;
+        }
+		
+		private void crossfade(View viewIn, final View viewOut) {
+			// Set the content view to 0% opacity but visible, so that it is visible
+		    // (but fully transparent) during the animation.
+		    viewIn.setAlpha(0f);
+		    viewIn.setVisibility(View.VISIBLE);
+
+		    // Animate the content view to 100% opacity, and clear any animation
+		    // listener set on the view.
+		    viewIn.animate()
+		            .alpha(1f)
+		            .setDuration(animationDuration)
+		            .setListener(null);
+
+		    // Animate the loading view to 0% opacity. After the animation ends,
+		    // set its visibility to GONE as an optimization step (it won't
+		    // participate in layout passes, etc.)
+		    viewOut.animate()
+		            .alpha(0f)
+		            .setDuration(animationDuration)
+		            .setListener(new AnimatorListenerAdapter() {
+		                @Override
+		                public void onAnimationEnd(Animator animation) {
+		                	viewOut.setVisibility(View.GONE);
+		                }
+		            });
+
+		}
+		
 	}
 	
 	/**
      * A fragment representing the front of the card.
      */
-    public static class CardFrontFragment extends Fragment {
+	public static class CardFrontFragment extends Fragment {
+		
+		public static final String ARG_WORD = "word";
+
+		public CardFrontFragment() {
+		}
+
+		@Override
+		public View onCreateView(LayoutInflater inflater, ViewGroup container,
+				Bundle savedInstanceState) {
+			View rootView = inflater.inflate(R.layout.fragment_quiz_card_front,
+					container, false);
+			TextView textView = (TextView) rootView.findViewById(R.id.quiz_word_display);
+			textView.setText(getArguments().getString(ARG_WORD));
+			textView.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					Log.v(TAG, "word is clicked");
+				}
+			});
+			
+			return rootView;
+		}
+	}
+		
+	/**
+     * A fragment representing the back of the card.
+     */
+	public static class CardBackFragment extends Fragment implements OnTouchListener, Handler.Callback {
     	
 		public static final String ARG_WORD_DEFINITION = "word_definition";
+    	public static final int CLICK_ON_WEBVIEW = 1;
+    	public static final int CLICK_ON_URL = 2;
+		
+    	private final Handler handler = new Handler(this);
     	
-		public CardFrontFragment() {}
+    	private WebView webView;
+    	private WebViewClient client;
+    	
+    	private String lastURL;
+    	
+		public CardBackFragment() {}		
 		
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                 Bundle savedInstanceState) {
         	
-        	View rootView = inflater.inflate(R.layout.fragment_quiz_card_front,
+        	View rootView = inflater.inflate(R.layout.fragment_quiz_card_back,
 					container, false);
-			WebView dummyWebView = (WebView) rootView.findViewById(R.id.quiz_definition_display);
-			dummyWebView.loadData(getArguments().getString(ARG_WORD_DEFINITION), "text/html", null);
+			webView = (WebView) rootView.findViewById(R.id.quiz_definition_display);
+			webView.setOnTouchListener(this);
 			
-			WebViewClient mWebClient = new WebViewClient(){		
+			client = new WebViewClient(){		
 				@Override
 				public boolean shouldOverrideUrlLoading(WebView view, String url) {
 					// Users select links to jump to a new word.
-					DefinitionActivity.makeQuery(getActivity(), url);
+					lastURL = url;
+					handler.sendEmptyMessage(CLICK_ON_URL);
 					return true;
 				}
 			};
-			dummyWebView.setWebViewClient(mWebClient);
+			webView.setWebViewClient(client);
+			webView.loadData(getArguments().getString(ARG_WORD_DEFINITION), "text/html", null);
 			
 			return rootView;
         }
+        
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            if (v.getId() == R.id.quiz_definition_display && event.getAction() == MotionEvent.ACTION_DOWN){
+                handler.sendEmptyMessageDelayed(CLICK_ON_WEBVIEW, 500);
+            }
+            return false;
+        }
+
+        @Override
+        public boolean handleMessage(Message msg) {
+            if (msg.what == CLICK_ON_URL){
+                handler.removeMessages(CLICK_ON_WEBVIEW);
+				DefinitionActivity.makeQuery(getActivity(), lastURL);
+                return true;
+            }
+            if (msg.what == CLICK_ON_WEBVIEW){
+                Log.v(TAG, "WebView clicked");
+                return true;
+            }
+            return false;
+        }
     }
 
-
+	
 }
