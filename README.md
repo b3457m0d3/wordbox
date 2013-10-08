@@ -1,3 +1,6 @@
+STATUS: Continuing development in a private repo.
+
+
 TODO
 
 Ordering of favourited words: options for chronological, alphabetical (drop down on up button thing).
